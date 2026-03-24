@@ -1,6 +1,6 @@
 # Vision Public School (VPS) Management Portal
 
-![VPS Logo](file:///C:/Users/ASUS/.gemini/antigravity/brain/88c80ad4-afb1-400c-b342-51f31eb80b0a/vps_logo_hero_1774342437975.png)
+![VPS Logo](./docs/images/vps_logo_hero.png)
 
 > A premium, fully-integrated management system for educational institutions, designed for performance, security, and a seamless user experience across all devices.
 
@@ -69,7 +69,7 @@ classDiagram
 
 ## 📱 User Workflows
 
-![Dashboard Mockup](file:///C:/Users/ASUS/.gemini/antigravity/brain/88c80ad4-afb1-400c-b342-51f31eb80b0a/vps_dashboard_mockup_1774342472519.png)
+![Dashboard Mockup](./docs/images/vps_dashboard_mockup.png)
 
 ### 👑 System Admin & Administrator
 *   **User Management**: Provision new staff accounts, reset passwords, and manage permissions.
