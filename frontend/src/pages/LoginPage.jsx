@@ -23,7 +23,11 @@ export default function LoginPage() {
       loginUser(data);
       navigate(data.role === 'ADMIN' || data.role === 'SYSTEM_ADMIN' ? '/admin' : '/student');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+      if (!err.response) {
+        setError('Network error: Unable to connect to the server. Please check your CORS settings or internet connection.');
+      } else {
+        setError(err.response.data?.message || 'Invalid credentials. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
