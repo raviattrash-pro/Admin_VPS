@@ -2,8 +2,8 @@ name: Triple DB Backup & Git Archive
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs once every day at midnight UTC
-  workflow_dispatch:      # Allows you to click "Run workflow" manually for testing
+    - cron: '0 0 * * *'  # Runs daily at midnight
+  workflow_dispatch:      # Allows manual testing
 
 jobs:
   database-backup:
@@ -28,7 +28,8 @@ jobs:
                     --databases test > backup.sql
 
       # 2. SYNC TO SECONDARY (Aiven)
-      - name: Import to Secondary (defaultdb)
+      # Note: This will create a 'test' database inside Aiven
+      - name: Import to Secondary (Aiven)
         run: |
           mysql --host=${{ secrets.AIVEN_DB_HOST }} \
                 --port=${{ secrets.AIVEN_DB_PORT }} \
@@ -37,7 +38,7 @@ jobs:
                 --ssl-mode=REQUIRED defaultdb < backup.sql
 
       # 3. SYNC TO TERNARY (TiDB Cluster 2)
-      - name: Import to Ternary (sys)
+      - name: Import to Ternary (TiDB Cluster 2)
         run: |
           mysql --host=${{ secrets.TERNARY_DB_HOST }} \
                 --port=4000 \
@@ -49,9 +50,7 @@ jobs:
       - name: Commit and Push SQL to Git
         run: |
           mkdir -p db-backups
-          # Save a dated copy for history
           cp backup.sql db-backups/backup-$(date +%Y-%m-%d).sql
-          # Overwrite 'latest' for easy access
           mv backup.sql db-backups/latest_backup.sql
           
           git config --global user.name "github-actions[bot]"
