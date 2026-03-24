@@ -2,8 +2,8 @@ name: Triple DB Backup & Git Archive
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs daily at midnight
-  workflow_dispatch:      # Allows manual testing
+    - cron: '0 0 * * *'  # Runs daily at midnight UTC
+  workflow_dispatch:      # Allows manual testing via the "Actions" tab
 
 jobs:
   database-backup:
@@ -18,18 +18,18 @@ jobs:
           sudo apt-get install -y mysql-client
 
       # 1. DUMP FROM PRIMARY (TiDB)
+      # Fix: Changed to --ssl-mode=REQUIRED to solve the CA cert error
       - name: Export from Primary (test)
         run: |
           mysqldump --host=${{ secrets.PRIMARY_DB_HOST }} \
                     --port=4000 \
                     --user=${{ secrets.PRIMARY_DB_USER }} \
                     --password=${{ secrets.PRIMARY_DB_PASS }} \
-                    --ssl-mode=VERIFY_IDENTITY \
+                    --ssl-mode=REQUIRED \
                     --databases test > backup.sql
 
       # 2. SYNC TO SECONDARY (Aiven)
-      # Note: This will create a 'test' database inside Aiven
-      - name: Import to Secondary (Aiven)
+      - name: Import to Secondary (defaultdb)
         run: |
           mysql --host=${{ secrets.AIVEN_DB_HOST }} \
                 --port=${{ secrets.AIVEN_DB_PORT }} \
@@ -38,19 +38,22 @@ jobs:
                 --ssl-mode=REQUIRED defaultdb < backup.sql
 
       # 3. SYNC TO TERNARY (TiDB Cluster 2)
-      - name: Import to Ternary (TiDB Cluster 2)
+      # Fix: Changed to --ssl-mode=REQUIRED for consistency
+      - name: Import to Ternary (sys)
         run: |
           mysql --host=${{ secrets.TERNARY_DB_HOST }} \
                 --port=4000 \
                 --user=${{ secrets.TERNARY_DB_USER }} \
                 --password=${{ secrets.TERNARY_DB_PASS }} \
-                --ssl-mode=VERIFY_IDENTITY sys < backup.sql
+                --ssl-mode=REQUIRED sys < backup.sql
 
-      # 4. SAVE TO GITHUB REPO
+      # 4. SAVE .SQL FILE TO GITHUB REPO
       - name: Commit and Push SQL to Git
         run: |
           mkdir -p db-backups
+          # Save dated file
           cp backup.sql db-backups/backup-$(date +%Y-%m-%d).sql
+          # Update latest file
           mv backup.sql db-backups/latest_backup.sql
           
           git config --global user.name "github-actions[bot]"
