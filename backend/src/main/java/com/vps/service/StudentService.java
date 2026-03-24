@@ -8,6 +8,8 @@ import com.vps.repository.UserRepository;
 import com.vps.util.FileStorageUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,9 +32,10 @@ public class StudentService {
     private final PasswordEncoder passwordEncoder;
     private final FileStorageUtil fileStorageUtil;
 
-    private static final DateTimeFormatter DOB_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DOB_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Transactional
+    @CacheEvict(value = "students", allEntries = true)
     public Map<String, Object> createStudent(StudentRequest req,
                                               MultipartFile birthCert,
                                               MultipartFile transferCert,
@@ -125,10 +128,12 @@ public class StudentService {
         return result;
     }
 
+    @Cacheable("students")
     public List<Student> getAllStudents() {
         return studentRepository.findAll();
     }
 
+    @Cacheable(value = "student", key = "#id")
     public Student getStudentById(Long id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
@@ -140,6 +145,7 @@ public class StudentService {
     }
 
     @Transactional
+    @CacheEvict(value = {"students", "student"}, allEntries = true)
     public Student updateStudent(Long id, StudentRequest req) {
         Student student = getStudentById(id);
 
@@ -181,6 +187,7 @@ public class StudentService {
         return studentRepository.save(student);
     }
 
+    @CacheEvict(value = {"students", "student"}, allEntries = true)
     public void deleteStudent(Long id) {
         Student student = getStudentById(id);
         if (student.getUser() != null) {

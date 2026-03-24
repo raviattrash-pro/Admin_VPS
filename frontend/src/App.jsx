@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -18,19 +19,22 @@ import {
   Sun, 
   Moon, 
   Download,
-  ChevronRight
+  ChevronRight,
+  Megaphone
 } from 'lucide-react';
-import LoginPage from './pages/LoginPage';
-import AdminDashboard from './pages/AdminDashboard';
-import AdmissionPage from './pages/AdmissionPage';
-import FeeManagementPage from './pages/FeeManagementPage';
-import StockPage from './pages/StockPage';
-import StudentsListPage from './pages/StudentsListPage';
-import StudentDashboard from './pages/StudentDashboard';
-import PayFeesPage from './pages/PayFeesPage';
-import ProfitLossPage from './pages/ProfitLossPage';
-import ProfilePage from './pages/ProfilePage';
-import UserManagementPage from './pages/UserManagementPage';
+// Lazy load pages for better performance
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdmissionPage = lazy(() => import('./pages/AdmissionPage'));
+const FeeManagementPage = lazy(() => import('./pages/FeeManagementPage'));
+const StockPage = lazy(() => import('./pages/StockPage'));
+const StudentsListPage = lazy(() => import('./pages/StudentsListPage'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const PayFeesPage = lazy(() => import('./pages/PayFeesPage'));
+const ProfitLossPage = lazy(() => import('./pages/ProfitLossPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
+const NoticesPage = lazy(() => import('./pages/NoticesPage'));
 import './App.css';
 
 import ThemeSwitcher from './components/ThemeSwitcher';
@@ -40,9 +44,15 @@ function ProtectedRoute({ children, role }) {
   if (!user) return <Navigate to="/login" />;
   
   if (role) {
-    const isAdmin = user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN';
-    if (role === 'ADMIN' && isAdmin) return children;
-    if (user.role !== role) return <Navigate to={isAdmin ? '/admin' : '/student'} />;
+    const isAdmin = ['ADMIN', 'SYSTEM_ADMIN'].includes(user.role);
+    const isStaff = ['TEACHER', 'ACCOUNTANT', 'STAFF'].includes(user.role);
+    
+    // Allow any admin/staff for role="MANAGEMENT" or similar
+    if (role === 'ADMIN' && (isAdmin || isStaff)) return children;
+    if (user.role !== role) {
+      if (isAdmin || isStaff) return <Navigate to="/admin" />;
+      return <Navigate to="/student" />;
+    }
   }
   return children;
 }
@@ -83,14 +93,29 @@ function Layout({ children }) {
     { path: '/admin/fees', icon: <Wallet size={18} />, label: 'Fee Management' },
     { path: '/admin/stock', icon: <Package size={18} />, label: 'Stock Management' },
     { path: '/admin/profit-loss', icon: <TrendingUp size={18} />, label: 'Profit / Loss' },
+    { path: '/admin/notices', icon: <Megaphone size={18} />, label: 'Notice Board' },
+    { path: '/profile', icon: <User size={18} />, label: 'Profile' },
   ];
 
   const studentLinks = [
     { path: '/student', icon: <Home size={18} />, label: 'Dashboard' },
+    { path: '/profile', icon: <User size={18} />, label: 'Profile' },
     { path: '/student/pay', icon: <CreditCard size={18} />, label: 'Pay Fees' },
   ];
 
-  const links = isAdmin ? adminLinks : studentLinks;
+  const links = isAdmin ? adminLinks.filter(link => {
+    // Filter logic for specific staff roles
+    if (user.role === 'TEACHER') {
+      return ['/admin', '/admin/students', '/admin/notices', '/profile'].includes(link.path);
+    }
+    if (user.role === 'ACCOUNTANT') {
+      return ['/admin', '/admin/fees', '/admin/profit-loss', '/profile'].includes(link.path);
+    }
+    if (user.role === 'STAFF') {
+      return ['/admin', '/admin/notices', '/profile'].includes(link.path);
+    }
+    return true; // ADMIN and SYSTEM_ADMIN see everything
+  }) : studentLinks;
 
   return (
     <div className="app-layout">
@@ -161,13 +186,19 @@ function Layout({ children }) {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
           >
-            {children}
+            <Suspense fallback={
+              <div className="flex-center" style={{ height: '60vh' }}>
+                <div className="loading-spinner-lux" />
+              </div>
+            }>
+              {children}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
 
       <div className="mobile-nav">
-        {links.slice(0, 4).map(link => (
+        {[...new Map([...links.slice(0, 4), links[links.length - 1]].map(l => [l.path, l])).values()].map(link => (
           <NavLink 
             key={link.path} 
             to={link.path} 
@@ -178,21 +209,30 @@ function Layout({ children }) {
             <span>{link.label}</span>
           </NavLink>
         ))}
-        <NavLink to="/profile" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
-          <User size={18} />
-          <span>Profile</span>
-        </NavLink>
       </div>
     </div>
   );
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
+        <Suspense fallback={<div className="full-page-loader" />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={
@@ -225,7 +265,10 @@ export default function App() {
             <ProtectedRoute role="STUDENT"><Layout><PayFeesPage /></Layout></ProtectedRoute>
           } />
 
-          {/* Shared Profile Route */}
+          {/* Shared Routes */}
+          <Route path="/admin/notices" element={
+            <ProtectedRoute role="ADMIN"><Layout><NoticesPage /></Layout></ProtectedRoute>
+          } />
           <Route path="/profile" element={
             <ProtectedRoute><Layout><ProfilePage /></Layout></ProtectedRoute>
           } />
@@ -233,7 +276,9 @@ export default function App() {
           {/* Default */}
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }

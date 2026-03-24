@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getStudents, getStudentById, updateStudent, deleteStudent, resetPassword, getStudentFeesForAdmin, downloadReceipt } from '../api/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
@@ -20,30 +21,43 @@ import {
   Camera,
   Download,
   Eye,
-  Activity
+  Activity,
+  Shield
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export default function StudentsListPage() {
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
   const [studentFees, setStudentFees] = useState([]);
- 
-  useEffect(() => { loadStudents(); }, []);
- 
-  const loadStudents = async () => {
-    try {
-      const res = await getStudents();
-      setStudents(res.data.data || []);
-    } catch (err) { console.error(err); }
-    setLoading(false);
-  };
+
+  const { data: studentsRes, isLoading } = useQuery({
+    queryKey: ['students'],
+    queryFn: getStudents,
+  });
+
+  const students = studentsRes?.data?.data || [];
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => updateStudent(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      if (selected) viewStudent(selected.id);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteStudent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      setSelected(null);
+    },
+  });
  
   const viewStudent = async (id) => {
     setIsEditing(false);
@@ -74,10 +88,8 @@ export default function StudentsListPage() {
     e.preventDefault();
     if (!confirm('Save changes to this profile?')) return;
     try {
-      await updateStudent(selected.id, editForm);
+      await updateMutation.mutateAsync({ id: selected.id, data: editForm });
       setIsEditing(false);
-      viewStudent(selected.id);
-      loadStudents();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update student');
     }
@@ -86,9 +98,7 @@ export default function StudentsListPage() {
   const handleDelete = async (id) => {
     if (!confirm('This will permanently delete the student and all associated records. Proceed?')) return;
     try {
-      await deleteStudent(id);
-      setSelected(null);
-      loadStudents();
+      await deleteMutation.mutateAsync(id);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete student');
     }
@@ -110,7 +120,11 @@ export default function StudentsListPage() {
     s.classForAdmission?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) return <div className="loading-spinner" />;
+  if (isLoading) return (
+    <div className="flex-center" style={{ height: '300px' }}>
+      <div className="loading-spinner-lux" />
+    </div>
+  );
 
   return (
     <motion.div className="fade-in" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -230,36 +244,107 @@ export default function StudentsListPage() {
               <div className="modal-content-area">
                 {activeTab === 'profile' ? (
                   isEditing ? (
-                    <form id="editStudentForm" onSubmit={handleUpdate} className="premium-form">
-                      <div className="form-grid">
-                        <div className="form-group"><label>Full Name</label><input required className="form-control" name="fullName" value={editForm.fullName || ''} onChange={handleEditChange} /></div>
-                        <div className="form-group"><label>Date of Birth</label><input type="date" className="form-control" name="dateOfBirth" value={editForm.dateOfBirth || ''} onChange={handleEditChange} /></div>
-                        <div className="form-group"><label>Gender</label><input required className="form-control" name="gender" value={editForm.gender || ''} onChange={handleEditChange} /></div>
-                        <div className="form-group"><label>Nationality</label><input required className="form-control" name="nationality" value={editForm.nationality || ''} onChange={handleEditChange} /></div>
-                        <div className="form-group"><label>Parent Name</label><input required className="form-control" name="parentName" value={editForm.parentName || ''} onChange={handleEditChange} /></div>
-                        <div className="form-group"><label>Mobile</label><input required className="form-control" name="parentMobile" value={editForm.parentMobile || ''} onChange={handleEditChange} /></div>
-                        <div className="form-group"><label>Class</label><input required className="form-control" name="classForAdmission" value={editForm.classForAdmission || ''} onChange={handleEditChange} /></div>
-                        <div className="form-group"><label>Academic Year</label><input required className="form-control" name="academicYear" value={editForm.academicYear || ''} onChange={handleEditChange} /></div>
+                    <form id="editStudentForm" onSubmit={handleUpdate} className="premium-form-expanded">
+                      <div className="form-sections">
+                        <div className="form-sub-section">
+                          <h5>Personal Details</h5>
+                          <div className="form-grid">
+                            <div className="form-group"><label>Full Name</label><input required className="form-control" name="fullName" value={editForm.fullName || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>DOB</label><input type="date" className="form-control" name="dateOfBirth" value={editForm.dateOfBirth || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Gender</label><input className="form-control" name="gender" value={editForm.gender || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Nationality</label><input className="form-control" name="nationality" value={editForm.nationality || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Mother Tongue</label><input className="form-control" name="motherTongue" value={editForm.motherTongue || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Blood Group</label><input className="form-control" name="bloodGroup" value={editForm.bloodGroup || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Category</label><input className="form-control" name="category" value={editForm.category || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Aadhaar/Samagra ID</label><input className="form-control" name="aadhaarOrSamagraId" value={editForm.aadhaarOrSamagraId || ''} onChange={handleEditChange} /></div>
+                          </div>
+                        </div>
+
+                        <div className="form-sub-section">
+                          <h5>Academic Details</h5>
+                          <div className="form-grid">
+                            <div className="form-group"><label>Class</label><input className="form-control" name="classForAdmission" value={editForm.classForAdmission || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Academic Year</label><input className="form-control" name="academicYear" value={editForm.academicYear || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Admission Type</label><input className="form-control" name="admissionType" value={editForm.admissionType || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Previous Grade</label><input className="form-control" name="previousGrade" value={editForm.previousGrade || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Marks Obtained</label><input className="form-control" name="marksObtained" value={editForm.marksObtained || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Board</label><input className="form-control" name="board" value={editForm.board || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Last School</label><input className="form-control" name="lastSchoolAttended" value={editForm.lastSchoolAttended || ''} onChange={handleEditChange} /></div>
+                          </div>
+                        </div>
+
+                        <div className="form-sub-section">
+                          <h5>Guardian Details</h5>
+                          <div className="form-grid">
+                            <div className="form-group"><label>Parent Name</label><input className="form-control" name="parentName" value={editForm.parentName || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Occupation</label><input className="form-control" name="parentOccupation" value={editForm.parentOccupation || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Mobile</label><input className="form-control" name="parentMobile" value={editForm.parentMobile || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Email</label><input className="form-control" name="parentEmail" value={editForm.parentEmail || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Address</label><textarea className="form-control" name="parentAddress" value={editForm.parentAddress || ''} onChange={handleEditChange} /></div>
+                          </div>
+                        </div>
+
+                        <div className="form-sub-section">
+                          <h5>Medical & Misc</h5>
+                          <div className="form-grid">
+                            <div className="form-group"><label>Allergies</label><input className="form-control" name="knownAllergies" value={editForm.knownAllergies || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Conditions</label><input className="form-control" name="medicalConditions" value={editForm.medicalConditions || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Emergency Contact</label><input className="form-control" name="emergencyContact" value={editForm.emergencyContact || ''} onChange={handleEditChange} /></div>
+                            <div className="form-group"><label>Transport Required</label>
+                              <select className="form-control" name="transportRequired" value={editForm.transportRequired ? 'true' : 'false'} onChange={e => handleEditChange({ target: { name: 'transportRequired', value: e.target.value === 'true' } })}>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </form>
                   ) : (
                     <div className="info-display">
                       <div className="info-section">
+                        <h4><IdCard size={16}/> Personal Identity</h4>
+                        <div className="info-grid">
+                          <div className="item"><label>DOB</label><span>{selected.dateOfBirth || '—'}</span></div>
+                          <div className="item"><label>Gender</label><span>{selected.gender || '—'}</span></div>
+                          <div className="item"><label>Nationality</label><span>{selected.nationality || '—'}</span></div>
+                          <div className="item"><label>Mother Tongue</label><span>{selected.motherTongue || '—'}</span></div>
+                          <div className="item"><label>Category</label><span>{selected.category || '—'}</span></div>
+                          <div className="item"><label>Blood Group</label><span>{selected.bloodGroup || '—'}</span></div>
+                          <div className="item"><label>Aadhaar/Samagra</label><span>{selected.aadhaarOrSamagraId || '—'}</span></div>
+                        </div>
+                      </div>
+
+                      <div className="info-section">
                         <h4><GraduationCap size={16}/> Academic Data</h4>
                         <div className="info-grid">
-                          <div className="item"><label>Enrollment Year</label><span>{selected.academicYear || '—'}</span></div>
+                          <div className="item"><label>Academic Year</label><span>{selected.academicYear || '—'}</span></div>
                           <div className="item"><label>Admission Type</label><span>{selected.admissionType || '—'}</span></div>
                           <div className="item"><label>Previous Grade</label><span>{selected.previousGrade || '—'}</span></div>
+                          <div className="item"><label>Marks Obtained</label><span>{selected.marksObtained || '—'}</span></div>
+                          <div className="item"><label>Board</label><span>{selected.board || '—'}</span></div>
                           <div className="item"><label>Last School</label><span>{selected.lastSchoolAttended || '—'}</span></div>
                         </div>
                       </div>
+
                       <div className="info-section">
-                        <h4><Phone size={16}/> Contact & Family</h4>
+                        <h4><Shield size={16}/> Guardian Details</h4>
                         <div className="info-grid">
-                          <div className="item"><label>Guardian</label><span>{selected.parentName || '—'}</span></div>
+                          <div className="item"><label>Guardian Name</label><span>{selected.parentName || '—'}</span></div>
+                          <div className="item"><label>Occupation</label><span>{selected.parentOccupation || '—'}</span></div>
                           <div className="item"><label>Phone</label><span>{selected.parentMobile || '—'}</span></div>
                           <div className="item"><label>Email</label><span>{selected.parentEmail || '—'}</span></div>
                           <div className="item"><label>Address</label><span>{selected.parentAddress || '—'}</span></div>
+                        </div>
+                      </div>
+
+                      <div className="info-section">
+                        <h4><Activity size={16} /> Health & Welfare</h4>
+                        <div className="info-grid">
+                          <div className="item"><label>Allergies</label><span>{selected.knownAllergies || 'None'}</span></div>
+                          <div className="item"><label>Medical Conditions</label><span>{selected.medicalConditions || 'None'}</span></div>
+                          <div className="item"><label>Emergency Contact</label><span>{selected.emergencyContact || '—'}</span></div>
+                          <div className="item"><label>Transport</label><span>{selected.transportRequired ? 'Required' : 'Not Required'}</span></div>
                         </div>
                       </div>
                     </div>
@@ -269,17 +354,28 @@ export default function StudentsListPage() {
                     <div className="glass-static doc-card">
                       <div className="card-header">
                         <Camera size={20} className="accent-text" />
-                        <h4>Media & Attachments</h4>
+                        <h4>Official Documentation</h4>
                       </div>
-                      <div className="media-list">
-                        <div className="photo-entry">
-                          <div className="photo-preview">
-                            {selected.photographPath ? <img src={`${API_URL}/uploads/${selected.photographPath}`} alt="Photo" /> : <Users size={24}/>}
-                          </div>
-                          <div className="photo-meta">
-                            <span>Official Photograph</span>
-                            {selected.photographPath && <a href={`${API_URL}/uploads/${selected.photographPath}`} target="_blank"><Download size={14}/> Download</a>}
-                          </div>
+                      <div className="media-list-luxury">
+                        <div className="doc-entry">
+                          <div className="preview-small">{selected.photographPath ? <img src={`${API_URL}/uploads/${selected.photographPath}`} alt="Photo" /> : <Users size={20}/>}</div>
+                          <div className="doc-info"><span>Photograph</span>{selected.photographPath && <a href={`${API_URL}/uploads/${selected.photographPath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                        </div>
+                        <div className="doc-entry">
+                          <div className="preview-small"><FileText size={20}/></div>
+                          <div className="doc-info"><span>Birth Certificate</span>{selected.birthCertificatePath && <a href={`${API_URL}/uploads/${selected.birthCertificatePath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                        </div>
+                        <div className="doc-entry">
+                          <div className="preview-small"><FileText size={20}/></div>
+                          <div className="doc-info"><span>Transfer Certificate</span>{selected.transferCertificatePath && <a href={`${API_URL}/uploads/${selected.transferCertificatePath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                        </div>
+                        <div className="doc-entry">
+                          <div className="preview-small"><FileText size={20}/></div>
+                          <div className="doc-info"><span>Report Card</span>{selected.reportCardPath && <a href={`${API_URL}/uploads/${selected.reportCardPath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                        </div>
+                        <div className="doc-entry">
+                          <div className="preview-small"><MapPin size={20}/></div>
+                          <div className="doc-info"><span>Residence Proof</span>{selected.proofOfResidencePath && <a href={`${API_URL}/uploads/${selected.proofOfResidencePath}`} target="_blank"><Download size={14}/> Download</a>}</div>
                         </div>
                       </div>
                     </div>

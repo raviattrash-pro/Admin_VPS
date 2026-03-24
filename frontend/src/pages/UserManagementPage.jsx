@@ -75,9 +75,11 @@ export default function UserManagementPage() {
   const handleReset = async (id) => {
     if (!confirm('Re-initialize access to default?')) return;
     try {
-      const res = await resetUserPassword(id);
+      await resetUserPassword(id);
       setMessage({ text: 'Access key reset to default', type: 'success' });
-    } catch (err) { setMessage({ text: 'Reset operation failed', type: 'error' }); }
+    } catch (err) { 
+      setMessage({ text: err.response?.data?.message || 'Reset operation failed', type: 'error' }); 
+    }
   };
 
   const canManageAdmins = currentUser?.role === 'SYSTEM_ADMIN';

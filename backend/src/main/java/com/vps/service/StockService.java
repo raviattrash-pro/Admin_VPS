@@ -5,6 +5,8 @@ import com.vps.entity.StockItem;
 import com.vps.repository.StockHistoryRepository;
 import com.vps.repository.StockItemRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,26 +20,31 @@ public class StockService {
     private final StockHistoryRepository stockHistoryRepository;
 
     @Transactional
+    @CacheEvict(value = {"stockItems", "stockItemsByCategory"}, allEntries = true)
     public StockItem createItem(StockItem item, String adminName) {
         StockItem saved = stockItemRepository.save(item);
         recordHistory(saved, "ADDED", item.getQuantity(), 0, item.getQuantity(), null, "Initial stock", adminName);
         return saved;
     }
 
+    @Cacheable("stockItems")
     public List<StockItem> getAllItems() {
         return stockItemRepository.findAll();
     }
 
+    @Cacheable(value = "stockItemsByCategory", key = "#category")
     public List<StockItem> getItemsByCategory(String category) {
         return stockItemRepository.findByCategory(category);
     }
 
+    @Cacheable(value = "stockItem", key = "#id")
     public StockItem getItemById(Long id) {
         return stockItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Stock item not found"));
     }
 
     @Transactional
+    @CacheEvict(value = {"stockItems", "stockItemsByCategory", "stockItem"}, allEntries = true)
     public StockItem updateItem(Long id, StockItem updated, String adminName) {
         StockItem item = getItemById(id);
         int oldQty = item.getQuantity();
@@ -61,6 +68,7 @@ public class StockService {
     }
 
     @Transactional
+    @CacheEvict(value = {"stockItems", "stockItemsByCategory", "stockItem"}, allEntries = true)
     public StockItem issueItem(Long id, int quantity, String issuedTo, String remarks, String adminName) {
         StockItem item = getItemById(id);
         int oldQty = item.getQuantity();
@@ -76,6 +84,7 @@ public class StockService {
         return saved;
     }
 
+    @CacheEvict(value = {"stockItems", "stockItemsByCategory", "stockItem"}, allEntries = true)
     public void deleteItem(Long id) {
         stockItemRepository.deleteById(id);
     }

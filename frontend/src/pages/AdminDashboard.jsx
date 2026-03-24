@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getStudents, getAllFees, getStockItems, getAllNotices, createNotice, updateNotice, deleteNotice } from '../api/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
@@ -38,40 +39,60 @@ const item = {
 };
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ students: 0, fees: 0, pending: 0, stockItems: 0 });
-  const [recentStudents, setRecentStudents] = useState([]);
-  const [notices, setNotices] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Notice Modal State
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState({ title: '', content: '', category: 'General', priority: 'Medium', active: true });
 
-  useEffect(() => { loadDashboard(); }, []);
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['admin-dashboard'],
+    queryFn: async () => {
+      const fetchSafe = async (fn, defaultVal = []) => {
+        try {
+          const res = await fn();
+          return res.data.data || defaultVal;
+        } catch (err) {
+          console.error('Safe fetch failed:', err);
+          return defaultVal;
+        }
+      };
 
-  const loadDashboard = async () => {
-    setLoading(true);
-    try {
-      const [studentsRes, feesRes, stockRes, noticesRes] = await Promise.all([
-        getStudents(), getAllFees(), getStockItems(), getAllNotices()
+      const [students, fees, stock, notices] = await Promise.all([
+        fetchSafe(getStudents),
+        fetchSafe(getAllFees),
+        fetchSafe(getStockItems),
+        fetchSafe(getAllNotices)
       ]);
-      const students = studentsRes.data.data || [];
-      const fees = feesRes.data.data || [];
-      const stock = stockRes.data.data || [];
-      const pending = fees.filter(f => f.status === 'PENDING').length;
 
-      setStats({
-        students: students.length,
-        fees: fees.length,
-        pending,
-        stockItems: stock.length
-      });
-      setRecentStudents(students.slice(-5).reverse());
-      setNotices(noticesRes.data.data || []);
-    } catch (err) { console.error('Dashboard load error:', err); }
-    setLoading(false);
-  };
+      const pending = fees.filter(f => f.status === 'PENDING').length;
+      
+      return {
+        stats: { students: students.length, fees: fees.length, pending, stockItems: stock.length },
+        recentStudents: students.slice(-5).reverse(),
+        notices: notices
+      };
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
+  const noticeMutation = useMutation({
+    mutationFn: (data) => editItem ? updateNotice(editItem.id, data) : createNotice(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+      setShowModal(false);
+    },
+  });
+
+  const deleteNoticeMutation = useMutation({
+    mutationFn: deleteNotice,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+    },
+  });
+
+  if (isLoading) return <div className="full-page-loader" />;
+
+  const { stats, recentStudents, notices } = dashboardData || { stats: {}, recentStudents: [], notices: [] };
 
   const openAdd = () => {
     setEditItem(null);
@@ -91,22 +112,16 @@ export default function AdminDashboard() {
   const handleNoticeSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (editItem) {
-        await updateNotice(editItem.id, form);
-      } else {
-        await createNotice(form);
-      }
-      setShowModal(false);
-      loadDashboard();
+      await noticeMutation.mutateAsync(form);
     } catch (err) { alert(err.response?.data?.message || 'Error saving notice'); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this notice?')) return;
-    try { await deleteNotice(id); loadDashboard(); } catch (err) { alert('Failed to delete'); }
+    try { 
+      await deleteNoticeMutation.mutateAsync(id); 
+    } catch (err) { alert('Failed to delete'); }
   };
-
-  if (loading) return <div className="loading-spinner" />;
 
   return (
     <div className="dashboard-container">
@@ -268,7 +283,6 @@ export default function AdminDashboard() {
           >
             <motion.div 
               className="modal glass-static"
-              style={{ overflow: 'hidden' }}
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
