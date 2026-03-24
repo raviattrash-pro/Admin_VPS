@@ -2,8 +2,10 @@ name: Render Keep-Alive
 
 on:
   schedule:
-    - cron: '*/14 * * * *' # Runs every 14 minutes
-  workflow_dispatch:      # Allows you to test it manually
+    # Changed to 14 minutes to stay safely ahead of Render's 15-minute spin-down
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+    # Allows you to test it manually from the Actions tab
 
 jobs:
   ping-render:
@@ -11,6 +13,7 @@ jobs:
     steps:
       - name: Send Heartbeat Ping
         run: |
-          # Replace the URL below with your actual Render service URL
-          curl -s -f https://admin-vps.onrender.com > /dev/null
-          echo "Ping sent successfully at $(date)"
+          # Removed -f (fail) so the workflow doesn't crash if the site is waking up
+          # Added -L (location) to follow any HTTPS or domain redirects
+          curl -s -L https://admin-vps.onrender.com > /dev/null
+          echo "Ping attempt completed at $(date)"
