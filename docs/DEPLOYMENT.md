@@ -51,7 +51,8 @@ Vercel provides optimized hosting for React/Vite applications.
     | Key | Value |
     | :--- | :--- |
     | `VITE_API_URL` | `https://vps-backend.onrender.com` (Your Render URL) |
-4.  **Build & Deploy**: Click Deploy. Vercel will provide a `.vercel.app` URL.
+4.  **SPA Routing**: Ensure the `frontend/vercel.json` file is present to prevent 404 errors on page refresh.
+5.  **Build & Deploy**: Click Deploy. Vercel will provide a `.vercel.app` URL.
 
 ---
 
