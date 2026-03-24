@@ -1,55 +1,61 @@
-name: Triple Database Backup & Git Archiving
+name: Triple DB Backup & Git Archive
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight
-  workflow_dispatch:   # Allows you to run it manually for testing
+    - cron: '0 0 * * *'  # Runs once every day at midnight UTC
+  workflow_dispatch:      # Allows you to click "Run workflow" manually for testing
 
 jobs:
-  sync-and-archive:
+  database-backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Install MySQL Client
-        run: sudo apt-get update && sudo apt-get install -y mysql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
 
-      # 1. Export from Primary TiDB
-      - name: Dump Primary Database
+      # 1. DUMP FROM PRIMARY (TiDB)
+      - name: Export from Primary (test)
         run: |
           mysqldump --host=${{ secrets.PRIMARY_DB_HOST }} \
                     --port=4000 \
                     --user=${{ secrets.PRIMARY_DB_USER }} \
                     --password=${{ secrets.PRIMARY_DB_PASS }} \
                     --ssl-mode=VERIFY_IDENTITY \
-                    --databases library_app > backup.sql
+                    --databases test > backup.sql
 
-      # 2. Push to Aiven Secondary
-      - name: Sync to Aiven
+      # 2. SYNC TO SECONDARY (Aiven)
+      - name: Import to Secondary (defaultdb)
         run: |
           mysql --host=${{ secrets.AIVEN_DB_HOST }} \
                 --port=${{ secrets.AIVEN_DB_PORT }} \
                 --user=${{ secrets.AIVEN_DB_USER }} \
                 --password=${{ secrets.AIVEN_DB_PASS }} \
-                --ssl-mode=REQUIRED library_app < backup.sql
+                --ssl-mode=REQUIRED defaultdb < backup.sql
 
-      # 3. Push to TiDB Ternary (Different Region)
-      - name: Sync to TiDB Ternary
+      # 3. SYNC TO TERNARY (TiDB Cluster 2)
+      - name: Import to Ternary (sys)
         run: |
           mysql --host=${{ secrets.TERNARY_DB_HOST }} \
                 --port=4000 \
                 --user=${{ secrets.TERNARY_DB_USER }} \
                 --password=${{ secrets.TERNARY_DB_PASS }} \
-                --ssl-mode=VERIFY_IDENTITY library_app < backup.sql
+                --ssl-mode=VERIFY_IDENTITY sys < backup.sql
 
-      # 4. Commit .sql file to Git
-      - name: Archive SQL in Git
+      # 4. SAVE TO GITHUB REPO
+      - name: Commit and Push SQL to Git
         run: |
-          mkdir -p backups
-          cp backup.sql backups/db_backup_$(date +%Y-%m-%d).sql
-          git config --global user.name "Backup Bot"
-          git config --global user.email "backup-bot@github.com"
-          git add backups/
-          git commit -m "Automated DB Backup - $(date +%Y-%m-%d)"
+          mkdir -p db-backups
+          # Save a dated copy for history
+          cp backup.sql db-backups/backup-$(date +%Y-%m-%d).sql
+          # Overwrite 'latest' for easy access
+          mv backup.sql db-backups/latest_backup.sql
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add db-backups/
+          git commit -m "Automated DB Backup: $(date +%Y-%m-%d)"
           git push
