@@ -1,0 +1,16 @@
+name: Render Keep-Alive
+
+on:
+  schedule:
+    - cron: '*/14 * * * *' # Runs every 14 minutes
+  workflow_dispatch:      # Allows you to test it manually
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Heartbeat Ping
+        run: |
+          # Replace the URL below with your actual Render service URL
+          curl -s -f https://admin-vps.onrender.com > /dev/null
+          echo "Ping sent successfully at $(date)"
