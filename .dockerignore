@@ -1,0 +1,26 @@
+# Node.js
+frontend/node_modules
+frontend/dist
+frontend/.env
+
+# Maven
+backend/target
+backend/*.log
+backend/.settings
+backend/.classpath
+backend/.project
+backend/.factorypath
+
+# IDE
+.idea
+.vscode
+*.swp
+*.bak
+
+# Documents
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Docker
+Dockerfile
+.dockerignore
