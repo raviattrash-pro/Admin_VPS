@@ -2,10 +2,14 @@ name: Render Keep-Alive
 
 on:
   schedule:
-    # Changed to 14 minutes to stay safely ahead of Render's 15-minute spin-down
-    - cron: '*/14 * * * *'
+    # Runs every 10 mins from ~5:30 AM to 8:30 PM IST (0-15 UTC)
+    - cron: '*/10 0-15 * * *'
   workflow_dispatch:
-    # Allows you to test it manually from the Actions tab
+    inputs:
+      clear_all:
+        description: 'Type "true" to wipe ALL history'
+        required: false
+        default: 'false'
 
 jobs:
   ping-render:
@@ -13,7 +17,23 @@ jobs:
     steps:
       - name: Send Heartbeat Ping
         run: |
-          # Removed -f (fail) so the workflow doesn't crash if the site is waking up
-          # Added -L (location) to follow any HTTPS or domain redirects
           curl -s -L https://admin-vps.onrender.com > /dev/null
-          echo "Ping attempt completed at $(date)"
+          echo "Ping sent at $(date)"
+
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete History
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event.inputs.clear_all }}" == "true" ]; then
+            echo "Wiping ALL workflow history..."
+            gh run list --workflow "Render Keep-Alive" --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {}
+          else
+            echo "Cleaning logs older than 24 hours..."
+            # Deletes runs older than 1 day to keep your history clean
+            gh run list --workflow "Render Keep-Alive" --created "<$(date -d '1 day ago' -Iseconds)" --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {}
+          fi
