@@ -1,13 +1,20 @@
-name: Render Keep-Alive (Daytime & Auto-Clean)
+name: Render Keep-Alive
 
 on:
   schedule:
     # Runs every 10 mins from ~5:30 AM to 8:30 PM IST (0-15 UTC)
     - cron: '*/10 0-15 * * *'
   workflow_dispatch:
+    inputs:
+      clear_all:
+        description: 'Set to "true" to wipe ALL history now'
+        required: false
+        default: 'false'
 
 jobs:
   ping-render:
+    # Only run the ping if we ARE NOT doing a manual "Clear All"
+    if: github.event.inputs.clear_all != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Send Heartbeat Ping
@@ -15,15 +22,19 @@ jobs:
           curl -s -L https://admin-vps.onrender.com > /dev/null
           echo "Daytime ping sent at $(date)"
 
-  cleanup-history:
+  cleanup:
     runs-on: ubuntu-latest
     permissions:
       actions: write
-      contents: read
     steps:
-      - name: Delete workflow runs older than 1 day
+      - name: Delete History
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Finds runs older than 24 hours and deletes them
-          gh run list --workflow "Render Keep-Alive (Daytime & Auto-Clean)" --created "<$(date -d '1 day ago' -Iseconds)" --json databaseId  --jq '.[].databaseId' | xargs -I {} gh run delete {}
+          if [ "${{ github.event.inputs.clear_all }}" == "true" ]; then
+            echo "Wiping ALL workflow history..."
+            gh run list --workflow "Render Keep-Alive" --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {}
+          else
+            echo "Cleaning logs older than 24 hours..."
+            gh run list --workflow "Render Keep-Alive" --created "<$(date -d '1 day ago' -Iseconds)" --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {}
+          fi
