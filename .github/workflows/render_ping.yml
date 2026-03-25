@@ -1,11 +1,12 @@
-name: Render Keep-Alive
+name: Render Keep-Alive (Daytime Only)
 
 on:
   schedule:
-    # Changed to 14 minutes to stay safely ahead of Render's 15-minute spin-down
-    - cron: '*/14 * * * *'
+    # Runs every 10 minutes between 00:00 and 15:00 UTC
+    # This equals ~5:30 AM to 8:30 PM IST
+    - cron: '*/10 0-15 * * *'
   workflow_dispatch:
-    # Allows you to test it manually from the Actions tab
+    # Manual trigger for testing
 
 jobs:
   ping-render:
@@ -13,7 +14,7 @@ jobs:
     steps:
       - name: Send Heartbeat Ping
         run: |
-          # Removed -f (fail) so the workflow doesn't crash if the site is waking up
-          # Added -L (location) to follow any HTTPS or domain redirects
+          # Removed -f to stop exit code 22 errors
+          # Added -L to follow redirects
           curl -s -L https://admin-vps.onrender.com > /dev/null
-          echo "Ping attempt completed at $(date)"
+          echo "Daytime ping sent at $(date)"
