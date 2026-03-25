@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUsers, createUser, deleteUser, resetUserPassword } from '../api/api';
+import { getUsers, createUser, deleteUser, resetUserPassword, getUploadUrl } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -152,7 +152,17 @@ export default function UserManagementPage() {
                 <motion.tr key={u.id} variants={item}>
                   <td>
                     <div className="user-identity-cell">
-                      <div className="avatar-lux">{u.fullName?.[0]}</div>
+                      <div className="avatar-lux">
+                        {u.photographPath ? (
+                          <img 
+                            src={getUploadUrl(u.photographPath)} 
+                            alt={u.fullName} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                          />
+                        ) : (
+                          <span className="avatar-initial">{u.fullName?.[0]}</span>
+                        )}
+                      </div>
                       <div className="name-box">
                         <span className="full-name">{u.fullName}</span>
                         <span className="role-tag">{u.role}</span>

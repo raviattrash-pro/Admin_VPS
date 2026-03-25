@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getPaymentConfig, submitPayment, getMyFees, downloadReceipt } from '../api/api';
+import { getPaymentConfig, submitPayment, getMyFees, downloadReceipt, getUploadUrl } from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CreditCard, 
@@ -17,7 +17,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export default function PayFeesPage() {
   const { user } = useAuth();
@@ -132,9 +131,10 @@ export default function PayFeesPage() {
                 {config?.qrCodePath ? (
                   <div className="qr-wrapper-lux">
                     <img 
-                      src={`${API_URL}/uploads/${config.qrCodePath}`} 
+                      src={getUploadUrl(config.qrCodePath)} 
                       alt="Payment QR" 
                       className="qr-img"
+                      onError={(e) => { e.target.src = 'https://placehold.co/200x200?text=QR+Load+Error'; }}
                     />
                     <div className="qr-glow"></div>
                   </div>

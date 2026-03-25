@@ -4,7 +4,6 @@ import com.vps.entity.StockHistory;
 import com.vps.entity.StockItem;
 import com.vps.repository.StockHistoryRepository;
 import com.vps.repository.StockItemRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -13,11 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class StockService {
 
     private final StockItemRepository stockItemRepository;
     private final StockHistoryRepository stockHistoryRepository;
+
+    public StockService(StockItemRepository stockItemRepository, StockHistoryRepository stockHistoryRepository) {
+        this.stockItemRepository = stockItemRepository;
+        this.stockHistoryRepository = stockHistoryRepository;
+    }
 
     @Transactional
     @CacheEvict(value = {"stockItems", "stockItemsByCategory"}, allEntries = true)

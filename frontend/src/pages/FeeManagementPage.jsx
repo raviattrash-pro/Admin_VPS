@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  getPendingPayments, getAllFees, verifyPayment, recordOfflinePayment,
-  getStudents, downloadReceipt, getPaymentConfig, updatePaymentConfig
+import { getPendingPayments, getAllFees, verifyPayment, recordOfflinePayment,
+  getStudents, downloadReceipt, getPaymentConfig, updatePaymentConfig, getUploadUrl
 } from '../api/api';
 import { 
   Wallet, 
@@ -20,7 +19,6 @@ import {
   Clock
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export default function FeeManagementPage() {
   const { user } = useAuth();
@@ -204,7 +202,17 @@ export default function FeeManagementPage() {
                   <motion.tr key={fee.id} layout>
                     <td>
                       <div className="student-cell">
-                        <div className="avatar-sm">{getStudentName(fee).charAt(0)}</div>
+                        <div className="avatar-sm">
+                          {fee.student?.photographPath ? (
+                            <img 
+                              src={getUploadUrl(fee.student.photographPath)} 
+                              alt={getStudentName(fee)} 
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                            />
+                          ) : (
+                            getStudentName(fee).charAt(0)
+                          )}
+                        </div>
                         <div className="details">
                           <div className="name">{getStudentName(fee)}</div>
                           <div className="id">{fee.student?.studentId || 'N/A'}</div>
@@ -228,9 +236,13 @@ export default function FeeManagementPage() {
                         <motion.div 
                           className="screenshot-wrapper"
                           whileHover={{ scale: 1.1 }}
-                          onClick={() => setPreviewImg(`${API_URL}/uploads/${fee.screenshotPath}`)}
+                          onClick={() => setPreviewImg(getUploadUrl(fee.screenshotPath))}
                         >
-                          <img src={`${API_URL}/uploads/${fee.screenshotPath}`} alt="screenshot" />
+                          <img 
+                             src={getUploadUrl(fee.screenshotPath)} 
+                             alt="screenshot" 
+                             onError={(e) => { e.target.src = 'https://placehold.co/100x100?text=No+Preview'; }}
+                          />
                           <div className="overlay"><Search size={14} /></div>
                         </motion.div>
                       ) : <span className="muted-text">—</span>}
@@ -274,7 +286,11 @@ export default function FeeManagementPage() {
               animate={{ scale: 1 }}
               onClick={e => e.stopPropagation()}
             >
-              <img src={previewImg} alt="Payment Screenshot" />
+              <img 
+                src={previewImg} 
+                alt="Payment Screenshot" 
+                onError={(e) => { e.target.src = 'https://placehold.co/400x400?text=Image+Load+Error'; }} 
+              />
               <button className="btn btn-primary" style={{ marginTop: '16px', width: '100%' }} onClick={() => setPreviewImg(null)}>Close Preview</button>
             </motion.div>
           </motion.div>
@@ -312,9 +328,18 @@ export default function FeeManagementPage() {
                           <div className="search-item empty">No students found</div>
                         ) : (
                           filteredStudents.map(s => (
-                            <div key={s.id} className="search-item" onClick={() => selectStudent(s)}>
-                              <div className="item-main">{s.fullName}</div>
-                              <div className="item-sub">ID: {s.studentId} • Class: {s.classForAdmission}</div>
+                            <div key={s.id} className="search-item" onClick={() => selectStudent(s)} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div className="avatar-xs" style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {s.photographPath ? (
+                                  <img src={getUploadUrl(s.photographPath)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <span style={{ fontSize: '12px', fontWeight: '700' }}>{s.fullName?.[0]}</span>
+                                )}
+                              </div>
+                              <div className="item-info">
+                                <div className="item-main">{s.fullName}</div>
+                                <div className="item-sub">ID: {s.studentId} • Class: {s.classForAdmission}</div>
+                              </div>
                             </div>
                           ))
                         )}

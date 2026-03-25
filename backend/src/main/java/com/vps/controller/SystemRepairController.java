@@ -3,7 +3,6 @@ package com.vps.controller;
 import com.vps.dto.ApiResponse;
 import com.vps.entity.User;
 import com.vps.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -11,11 +10,15 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/system")
-@RequiredArgsConstructor
 public class SystemRepairController {
 
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
+
+    public SystemRepairController(JdbcTemplate jdbcTemplate, UserRepository userRepository) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.userRepository = userRepository;
+    }
 
     @GetMapping("/diagnose")
     public ResponseEntity<?> diagnose(@AuthenticationPrincipal User currentUser) {
@@ -30,7 +33,6 @@ public class SystemRepairController {
 
     @PostMapping("/repair-db")
     public ResponseEntity<?> repairDb(@AuthenticationPrincipal User currentUser) {
-        // Only SYSTEM_ADMIN can repair
         if (currentUser.getRole() != User.Role.SYSTEM_ADMIN) {
             return ResponseEntity.status(403).body(ApiResponse.error("Only system administrators can perform DB repairs"));
         }

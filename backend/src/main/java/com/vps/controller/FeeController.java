@@ -6,7 +6,6 @@ import com.vps.entity.Student;
 import com.vps.entity.User;
 import com.vps.service.FeeService;
 import com.vps.service.StudentService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,13 +18,16 @@ import java.util.List;
 
 @RestController
 @RequestMapping("")
-@RequiredArgsConstructor
 public class FeeController {
 
     private final FeeService feeService;
     private final StudentService studentService;
 
-    // Student: Submit online payment
+    public FeeController(FeeService feeService, StudentService studentService) {
+        this.feeService = feeService;
+        this.studentService = studentService;
+    }
+
     @PostMapping("/fees/pay")
     public ResponseEntity<?> submitOnlinePayment(
             @AuthenticationPrincipal User user,
@@ -43,7 +45,6 @@ public class FeeController {
         }
     }
 
-    // Student: Get my fees
     @GetMapping("/fees/my")
     public ResponseEntity<?> getMyFees(@AuthenticationPrincipal User user) {
         try {
@@ -55,7 +56,6 @@ public class FeeController {
         }
     }
 
-    // Admin: Record offline payment
     @PostMapping("/admin/fees/offline")
     public ResponseEntity<?> recordOfflinePayment(
             @AuthenticationPrincipal User admin,
@@ -72,7 +72,6 @@ public class FeeController {
         }
     }
 
-    // Admin: Verify payment
     @PutMapping("/admin/fees/{id}/verify")
     public ResponseEntity<?> verifyPayment(
             @AuthenticationPrincipal User admin,
@@ -87,21 +86,18 @@ public class FeeController {
         }
     }
 
-    // Admin: Get pending payments
     @GetMapping("/admin/fees/pending")
     public ResponseEntity<?> getPendingPayments() {
         List<FeeRecord> pending = feeService.getPendingPayments();
         return ResponseEntity.ok(ApiResponse.success("Pending payments fetched", pending));
     }
 
-    // Admin: Get all fees
     @GetMapping("/admin/fees")
     public ResponseEntity<?> getAllFees() {
         List<FeeRecord> fees = feeService.getAllFees();
         return ResponseEntity.ok(ApiResponse.success("All fees fetched", fees));
     }
- 
-    // Admin: Get fees for specific student
+
     @GetMapping("/admin/fees/student/{studentId}")
     public ResponseEntity<?> getStudentFeesForAdmin(@PathVariable Long studentId) {
         try {
@@ -112,7 +108,6 @@ public class FeeController {
         }
     }
 
-    // Both: Download receipt PDF
     @GetMapping("/fees/{id}/receipt")
     public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
         try {

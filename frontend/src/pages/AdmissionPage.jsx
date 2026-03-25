@@ -102,7 +102,16 @@ export default function AdmissionPage() {
             className="glass-static registration-success-card"
           >
             <div className="card-header-lux">
-              <ShieldCheck size={32} className="success-text" />
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <ShieldCheck size={32} className="success-text" />
+                {files.photograph && (
+                  <img 
+                    src={URL.createObjectURL(files.photograph)} 
+                    alt="Preview" 
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--success)' }} 
+                  />
+                )}
+              </div>
               <div className="text">
                 <h3>Admission Successful!</h3>
                 <p>Academic records have been initialized and secured.</p>
@@ -154,7 +163,29 @@ export default function AdmissionPage() {
                   <option value="Female">Female</option>
                 </select>
               </div>
+            </div>
+            <div className="form-row-half">
               <div className="form-group"><label>Nationality</label><input className="form-control" name="nationality" value={form.nationality} onChange={handleChange} /></div>
+              <div className="form-group"><label>Mother Tongue</label><input className="form-control" name="motherTongue" value={form.motherTongue} onChange={handleChange} placeholder="e.g. Hindi, English" /></div>
+            </div>
+            <div className="form-row-half">
+              <div className="form-group">
+                <label>Category</label>
+                <select className="form-control" name="category" value={form.category} onChange={handleChange}>
+                  <option value="">Select Category</option>
+                  <option value="General">General</option>
+                  <option value="OBC">OBC</option>
+                  <option value="SC">SC</option>
+                  <option value="ST">ST</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Blood Group</label>
+                <select className="form-control" name="bloodGroup" value={form.bloodGroup} onChange={handleChange}>
+                  <option value="">Select Blood Group</option>
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                </select>
+              </div>
             </div>
             <div className="form-group"><label>Samagra/Aadhaar Identifier *</label><input className="form-control" name="aadhaarOrSamagraId" value={form.aadhaarOrSamagraId} onChange={handleChange} required placeholder="Unique ID Number" /></div>
           </section>
@@ -170,6 +201,7 @@ export default function AdmissionPage() {
               <div className="form-group"><label>Emergency Mobile</label><input className="form-control" name="parentMobile" value={form.parentMobile} onChange={handleChange} placeholder="+91" /></div>
               <div className="form-group"><label>Official Email</label><input className="form-control" name="parentEmail" type="email" value={form.parentEmail} onChange={handleChange} placeholder="example@mail.com" /></div>
             </div>
+            <div className="form-group"><label>Parent Occupation</label><input className="form-control" name="parentOccupation" value={form.parentOccupation} onChange={handleChange} placeholder="e.g. Business, Service" /></div>
             <div className="form-group"><label>Home Address</label><textarea className="form-control" name="parentAddress" value={form.parentAddress} onChange={handleChange} rows="2" placeholder="Full residential details" /></div>
           </section>
 
@@ -189,6 +221,10 @@ export default function AdmissionPage() {
               <div className="form-group"><label>Previous Grade Result</label><input className="form-control" name="previousGrade" value={form.previousGrade} onChange={handleChange} placeholder="Percentage / GPA" /></div>
             </div>
             <div className="form-group"><label>Last Educational Institution</label><input className="form-control" name="lastSchoolAttended" value={form.lastSchoolAttended} onChange={handleChange} placeholder="School Name" /></div>
+            <div className="form-row-half">
+              <div className="form-group"><label>Board (CBSE/State/ICSE)</label><input className="form-control" name="board" value={form.board} onChange={handleChange} placeholder="e.g. CBSE" /></div>
+              <div className="form-group"><label>Total Marks Obtained</label><input className="form-control" name="marksObtained" value={form.marksObtained} onChange={handleChange} placeholder="e.g. 450/500" /></div>
+            </div>
           </section>
 
           {/* Section 4: Health & Misc */}
@@ -218,6 +254,7 @@ export default function AdmissionPage() {
                 { name: 'photograph', label: 'Photograph', icon: <Camera size={18}/> },
                 { name: 'birthCertificate', label: 'Birth Cert', icon: <FileText size={18}/> },
                 { name: 'transferCertificate', label: 'Transfer Cert', icon: <FileText size={18}/> },
+                { name: 'reportCard', label: 'Report Card', icon: <FileText size={18}/> },
                 { name: 'proofOfResidence', label: 'Residence Proof', icon: <MapPin size={18}/> }
               ].map(doc => (
                 <div key={doc.name} className="mini-upload-lux">

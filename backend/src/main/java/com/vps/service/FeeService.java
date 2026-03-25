@@ -6,7 +6,6 @@ import com.vps.repository.FeeRecordRepository;
 import com.vps.repository.StudentRepository;
 import com.vps.util.FileStorageUtil;
 import com.vps.util.PdfGenerator;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,7 +16,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class FeeService {
 
     private final FeeRecordRepository feeRecordRepository;
@@ -25,9 +23,14 @@ public class FeeService {
     private final FileStorageUtil fileStorageUtil;
     private final PdfGenerator pdfGenerator;
 
-    /**
-     * Student submits online payment with screenshot
-     */
+    public FeeService(FeeRecordRepository feeRecordRepository, StudentRepository studentRepository,
+                      FileStorageUtil fileStorageUtil, PdfGenerator pdfGenerator) {
+        this.feeRecordRepository = feeRecordRepository;
+        this.studentRepository = studentRepository;
+        this.fileStorageUtil = fileStorageUtil;
+        this.pdfGenerator = pdfGenerator;
+    }
+
     @Transactional
     public FeeRecord submitOnlinePayment(Long studentId, BigDecimal amount, String feeType,
                                           String transactionId, MultipartFile screenshot) throws IOException {
@@ -52,9 +55,6 @@ public class FeeService {
         return feeRecordRepository.save(record);
     }
 
-    /**
-     * Admin records offline payment
-     */
     @Transactional
     public FeeRecord recordOfflinePayment(Long studentId, BigDecimal amount, String feeType,
                                            String remarks, String adminName) {
@@ -75,9 +75,6 @@ public class FeeService {
         return feeRecordRepository.save(record);
     }
 
-    /**
-     * Admin verifies online payment
-     */
     @Transactional
     public FeeRecord verifyPayment(Long feeId, boolean approved, String adminName) {
         FeeRecord record = feeRecordRepository.findById(feeId)
@@ -102,9 +99,6 @@ public class FeeService {
         return feeRecordRepository.findAll();
     }
 
-    /**
-     * Generate PDF receipt for a verified payment
-     */
     public byte[] generateReceipt(Long feeId) {
         FeeRecord record = feeRecordRepository.findById(feeId)
                 .orElseThrow(() -> new RuntimeException("Fee record not found"));

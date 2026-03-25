@@ -6,6 +6,14 @@ const api = axios.create({
   baseURL: API_BASE,
 });
 
+export const getUploadUrl = (path) => {
+  if (!path) return '';
+  if (path.toString().startsWith('http')) return path;
+  // If API_BASE is a relative path like '/api', use window.location.origin
+  const base = API_BASE.startsWith('http') ? API_BASE : window.location.origin + API_BASE;
+  return `${base}/uploads/${path}`;
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -28,6 +36,13 @@ api.interceptors.response.use(
 // Auth
 export const login = (data) => api.post('/auth/login', data);
 export const changePassword = (data) => api.put('/auth/change-password', data);
+export const uploadProfilePhoto = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/auth/profile/photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
 export const resetPassword = (userId) => api.put(`/admin/reset-password/${userId}`);
 
 // Students (Admin)
@@ -94,5 +109,9 @@ export const getUsers = (role) => api.get('/admin/users', { params: { role } });
 export const createUser = (data) => api.post('/admin/users', data);
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`);
 export const resetUserPassword = (id) => api.put(`/admin/users/${id}/reset-password`);
+
+// System
+export const getSystemHealth = () => api.get('/system/health');
+export const getSystemDiagnosis = () => api.get('/system/environment');
 
 export default api;

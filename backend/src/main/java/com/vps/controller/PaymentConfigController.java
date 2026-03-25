@@ -3,26 +3,26 @@ package com.vps.controller;
 import com.vps.dto.ApiResponse;
 import com.vps.entity.PaymentConfig;
 import com.vps.service.PaymentConfigService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("")
-@RequiredArgsConstructor
 public class PaymentConfigController {
 
     private final PaymentConfigService paymentConfigService;
 
-    // Public: Get payment config (students need this to see UPI/QR)
+    public PaymentConfigController(PaymentConfigService paymentConfigService) {
+        this.paymentConfigService = paymentConfigService;
+    }
+
     @GetMapping("/payment-config")
     public ResponseEntity<?> getConfig() {
         PaymentConfig config = paymentConfigService.getConfig();
         return ResponseEntity.ok(ApiResponse.success("Payment config fetched", config));
     }
 
-    // Admin: Update payment config
     @PutMapping("/admin/payment-config")
     public ResponseEntity<?> updateConfig(
             @RequestParam(required = false) String upiId,

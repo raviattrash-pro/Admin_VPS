@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getMyProfile, getMyFees, downloadReceipt, getActiveNotices, changePassword } from '../api/api';
+import { getMyProfile, getMyFees, downloadReceipt, getActiveNotices, changePassword, getUploadUrl } from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, 
@@ -192,18 +192,33 @@ export default function StudentDashboard() {
                 <User size={20} className="accent-text" />
                 <h3>Identity Profile</h3>
               </div>
-              <div className="profile-details-lux">
-                <div className="detail-row">
-                  <IdRow icon={<ShieldCheck size={16}/>} label="ID Number" value={student.studentId} />
-                  <IdRow icon={<Calendar size={16}/>} label="DOB" value={student.dateOfBirth} />
+              <div className="profile-identity-display" style={{ display: 'flex', gap: '20px', padding: '20px' }}>
+                <div className="avatar-large-lux">
+                  {student?.photographPath ? (
+                    <img 
+                      src={getUploadUrl(student.photographPath)} 
+                      alt={student?.fullName} 
+                      className="profile-img-large" 
+                    />
+                  ) : (
+                    <div className="avatar-initial-large">
+                      <User size={40} className="accent-text" />
+                    </div>
+                  )}
                 </div>
-                <div className="detail-row">
-                  <IdRow icon={<User size={16}/>} label="Gender" value={student.gender} />
-                  <IdRow icon={<TrendingUp size={16}/>} label="Admission" value={student.admissionType} />
+                <div className="profile-details-lux" style={{ flex: 1 }}>
+                  <div className="detail-row">
+                    <IdRow icon={<ShieldCheck size={16}/>} label="ID Number" value={student.studentId} />
+                    <IdRow icon={<Calendar size={16}/>} label="DOB" value={student.dateOfBirth} />
+                  </div>
+                  <div className="detail-row">
+                    <IdRow icon={<User size={16}/>} label="Gender" value={student.gender} />
+                    <IdRow icon={<TrendingUp size={16}/>} label="Admission" value={student.admissionType} />
+                  </div>
                 </div>
-                <div className="full-row">
-                  <IdRow icon={<MapPin size={16}/>} label="Permanent Address" value={student.parentAddress} />
-                </div>
+              </div>
+              <div className="full-row" style={{ padding: '0 20px 20px' }}>
+                <IdRow icon={<MapPin size={16}/>} label="Permanent Address" value={student.parentAddress} />
               </div>
             </section>
           )}

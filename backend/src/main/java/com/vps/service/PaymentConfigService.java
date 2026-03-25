@@ -3,18 +3,21 @@ package com.vps.service;
 import com.vps.entity.PaymentConfig;
 import com.vps.repository.PaymentConfigRepository;
 import com.vps.util.FileStorageUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
 @Service
-@RequiredArgsConstructor
 public class PaymentConfigService {
 
     private final PaymentConfigRepository paymentConfigRepository;
     private final FileStorageUtil fileStorageUtil;
+
+    public PaymentConfigService(PaymentConfigRepository paymentConfigRepository, FileStorageUtil fileStorageUtil) {
+        this.paymentConfigRepository = paymentConfigRepository;
+        this.fileStorageUtil = fileStorageUtil;
+    }
 
     public PaymentConfig getConfig() {
         return paymentConfigRepository.findAll().stream().findFirst()
@@ -31,7 +34,6 @@ public class PaymentConfigService {
         config.setBankName(bankName);
 
         if (qrCode != null && !qrCode.isEmpty()) {
-            // Delete old QR if exists
             if (config.getQrCodePath() != null) {
                 fileStorageUtil.deleteFile(config.getQrCodePath());
             }

@@ -5,7 +5,6 @@ import com.vps.dto.StudentRequest;
 import com.vps.entity.Student;
 import com.vps.entity.User;
 import com.vps.service.StudentService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,12 +15,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("")
-@RequiredArgsConstructor
 public class StudentController {
 
     private final StudentService studentService;
 
-    // Admin: Create new student (admission)
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
     @PostMapping("/admin/students")
     public ResponseEntity<?> createStudent(
             @ModelAttribute StudentRequest request,
@@ -40,14 +41,12 @@ public class StudentController {
         }
     }
 
-    // Admin: Get all students
     @GetMapping("/admin/students")
     public ResponseEntity<?> getAllStudents() {
         List<Student> students = studentService.getAllStudents();
         return ResponseEntity.ok(ApiResponse.success("Students fetched", students));
     }
 
-    // Admin: Get student by ID
     @GetMapping("/admin/students/{id}")
     public ResponseEntity<?> getStudentById(@PathVariable Long id) {
         try {
@@ -58,7 +57,6 @@ public class StudentController {
         }
     }
 
-    // Admin: Update student
     @PutMapping("/admin/students/{id}")
     public ResponseEntity<?> updateStudent(@PathVariable Long id, @RequestBody StudentRequest request) {
         try {
@@ -69,7 +67,6 @@ public class StudentController {
         }
     }
 
-    // Admin: Delete student
     @DeleteMapping("/admin/students/{id}")
     public ResponseEntity<?> deleteStudent(@PathVariable Long id) {
         try {
@@ -80,7 +77,6 @@ public class StudentController {
         }
     }
 
-    // Student: Get own profile
     @GetMapping("/students/me")
     public ResponseEntity<?> getMyProfile(@AuthenticationPrincipal User user) {
         try {

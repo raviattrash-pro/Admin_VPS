@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getStudents, getAllFees, getStockItems, getAllNotices, createNotice, updateNotice, deleteNotice } from '../api/api';
+import { getSystemHealth, getStudents, getAllFees, getStockItems, getAllNotices, createNotice, updateNotice, deleteNotice, getUploadUrl } from '../api/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -17,7 +17,10 @@ import {
   TrendingDown,
   Activity,
   PlusCircle,
-  Megaphone
+  Megaphone,
+  Cpu,
+  Database,
+  Cloud
 } from 'lucide-react';
 
 const NOTICE_CATEGORIES = ['General', 'Exam', 'Holiday', 'Event', 'Fee', 'Other'];
@@ -57,19 +60,21 @@ export default function AdminDashboard() {
         }
       };
 
-      const [students, fees, stock, notices] = await Promise.all([
+      const [students, fees, stock, notices, health] = await Promise.all([
         fetchSafe(getStudents),
         fetchSafe(getAllFees),
         fetchSafe(getStockItems),
-        fetchSafe(getAllNotices)
+        fetchSafe(getAllNotices),
+        fetchSafe(getSystemHealth, { status: 'UNKNOWN' })
       ]);
 
       const pending = fees.filter(f => f.status === 'PENDING').length;
       
       return {
         stats: { students: students.length, fees: fees.length, pending, stockItems: stock.length },
-        recentStudents: students.slice(-5).reverse(),
-        notices: notices
+        recentStudents: students.slice(-10).reverse(),
+        notices: notices,
+        health: health
       };
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -92,7 +97,12 @@ export default function AdminDashboard() {
 
   if (isLoading) return <div className="full-page-loader" />;
 
-  const { stats, recentStudents, notices } = dashboardData || { stats: {}, recentStudents: [], notices: [] };
+  const { stats, recentStudents, notices, health } = dashboardData || { 
+    stats: {}, 
+    recentStudents: [], 
+    notices: [], 
+    health: { status: 'LOADING', database: {}, storage: {}, resources: {} } 
+  };
 
   const openAdd = () => {
     setEditItem(null);
@@ -239,34 +249,86 @@ export default function AdminDashboard() {
             <h3><UserPlus size={20} className="accent-color" /> Latest Admissions</h3>
           </div>
           
-          <div className="student-list">
+          <div className="student-list-compact">
             {recentStudents.length === 0 ? (
               <div className="empty-state">
                 <Users size={48} className="muted-icon" />
-                <p>No recent admissions recorded</p>
+                <p>No recent records</p>
               </div>
             ) : (
               recentStudents.map((s) => (
                 <motion.div 
                   key={s.id} 
-                  className="student-card glass"
-                  whileHover={{ x: 5 }}
+                  className="student-compact-item glass"
+                  whileHover={{ x: 5, background: 'rgba(255, 255, 255, 0.05)' }}
                 >
-                  <div className="student-avatar-wrapper">
-                    <div className="avatar">{s.fullName?.[0] || '?'}</div>
+                  <div className="avatar-mini">
+                    {s.photographPath ? (
+                      <img 
+                        src={getUploadUrl(s.photographPath)} 
+                        alt={s.fullName} 
+                      />
+                    ) : (
+                      s.fullName?.[0] || '?'
+                    )}
                   </div>
-                  <div className="student-details">
-                    <h4>{s.fullName}</h4>
-                    <div className="meta">
-                      <span>{s.classForAdmission || 'N/A'}</span>
-                      <span className="dot">•</span>
-                      <span>ID: {s.studentId || 'New'}</span>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="muted-icon" />
+                  <span className="student-name">{s.fullName}</span>
                 </motion.div>
               ))
             )}
+          </div>
+        </motion.div>
+
+        {/* System Health */}
+        <motion.div 
+          className="glass-static section-card"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <div className="section-header">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Activity size={20} className="accent-color" /> System Performance</h3>
+            <span className={`badge ${health.status === 'UP' ? 'badge-success' : 'badge-warning'}`}>
+              {health.status === 'UP' ? 'Optimal' : health.status}
+            </span>
+          </div>
+          
+          <div className="system-metrics">
+            <div className="metric-item">
+              <div className="metric-header">
+                <Database size={16} />
+                <span>Database Engine</span>
+              </div>
+              <div className={`metric-status ${health.database?.status === 'CONNECTED' ? 'text-success' : 'text-danger'}`}>
+                {health.database?.status || 'Unknown'}
+              </div>
+            </div>
+            
+            <div className="metric-item">
+              <div className="metric-header">
+                <Cloud size={16} />
+                <span>Storage System</span>
+              </div>
+              <div className="metric-status text-info">
+                {health.storage?.provider || 'Local Storage'}
+              </div>
+            </div>
+
+            <div className="metric-item">
+              <div className="metric-header">
+                <Cpu size={16} />
+                <span>Memory Utilization</span>
+              </div>
+              <div className="metric-progress-wrapper">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${(health.resources?.usedMemoryMB / health.resources?.totalMemoryMB) * 100}%` }}
+                  ></div>
+                </div>
+                <span>{health.resources?.usedMemoryMB}MB / {health.resources?.totalMemoryMB}MB</span>
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

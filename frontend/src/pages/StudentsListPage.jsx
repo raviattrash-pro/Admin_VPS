@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getStudents, getStudentById, updateStudent, deleteStudent, resetPassword, getStudentFeesForAdmin, downloadReceipt } from '../api/api';
+import { getStudents, getStudentById, updateStudent, deleteStudent, resetPassword, getStudentFeesForAdmin, downloadReceipt, getUploadUrl } from '../api/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -25,7 +25,6 @@ import {
   Shield
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export default function StudentsListPage() {
   const queryClient = useQueryClient();
@@ -179,7 +178,17 @@ export default function StudentsListPage() {
               >
                 <div className="student-card-header">
                   <div className="student-avatar-wrapper">
-                    <div className="avatar">{s.fullName?.[0]}</div>
+                    <div className="avatar">
+                      {s.photographPath ? (
+                        <img 
+                          src={getUploadUrl(s.photographPath)} 
+                          alt={s.fullName} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                        />
+                      ) : (
+                        s.fullName?.[0]
+                      )}
+                    </div>
                   </div>
                   <div className="student-main-info">
                     <h4>{s.fullName}</h4>
@@ -215,7 +224,17 @@ export default function StudentsListPage() {
             >
               <div className="modal-header-profile">
                 <div className="profile-summary">
-                  <div className="avatar-large">{selected.fullName?.[0]}</div>
+                  <div className="avatar-large">
+                    {selected.photographPath ? (
+                      <img 
+                        src={getUploadUrl(selected.photographPath)} 
+                        alt={selected.fullName} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                      />
+                    ) : (
+                      selected.fullName?.[0]
+                    )}
+                  </div>
                   <div className="text">
                     <h2>{selected.fullName}</h2>
                     <div className="badges">
@@ -358,24 +377,24 @@ export default function StudentsListPage() {
                       </div>
                       <div className="media-list-luxury">
                         <div className="doc-entry">
-                          <div className="preview-small">{selected.photographPath ? <img src={`${API_URL}/uploads/${selected.photographPath}`} alt="Photo" /> : <Users size={20}/>}</div>
-                          <div className="doc-info"><span>Photograph</span>{selected.photographPath && <a href={`${API_URL}/uploads/${selected.photographPath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                          <div className="preview-small">{selected.photographPath ? <img src={getUploadUrl(selected.photographPath)} alt="Photo" onError={(e) => { e.target.src = 'https://placehold.co/100x100?text=No+Photo'; }} /> : <Users size={20}/>}</div>
+                          <div className="doc-info"><span>Photograph</span>{selected.photographPath && <a href={getUploadUrl(selected.photographPath)} target="_blank" rel="noreferrer"><Download size={14}/> Download</a>}</div>
                         </div>
                         <div className="doc-entry">
                           <div className="preview-small"><FileText size={20}/></div>
-                          <div className="doc-info"><span>Birth Certificate</span>{selected.birthCertificatePath && <a href={`${API_URL}/uploads/${selected.birthCertificatePath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                          <div className="doc-info"><span>Birth Certificate</span>{selected.birthCertificatePath && <a href={getUploadUrl(selected.birthCertificatePath)} target="_blank" rel="noreferrer"><Download size={14}/> Download</a>}</div>
                         </div>
                         <div className="doc-entry">
                           <div className="preview-small"><FileText size={20}/></div>
-                          <div className="doc-info"><span>Transfer Certificate</span>{selected.transferCertificatePath && <a href={`${API_URL}/uploads/${selected.transferCertificatePath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                          <div className="doc-info"><span>Transfer Certificate</span>{selected.transferCertificatePath && <a href={getUploadUrl(selected.transferCertificatePath)} target="_blank" rel="noreferrer"><Download size={14}/> Download</a>}</div>
                         </div>
                         <div className="doc-entry">
                           <div className="preview-small"><FileText size={20}/></div>
-                          <div className="doc-info"><span>Report Card</span>{selected.reportCardPath && <a href={`${API_URL}/uploads/${selected.reportCardPath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                          <div className="doc-info"><span>Report Card</span>{selected.reportCardPath && <a href={getUploadUrl(selected.reportCardPath)} target="_blank" rel="noreferrer"><Download size={14}/> Download</a>}</div>
                         </div>
                         <div className="doc-entry">
                           <div className="preview-small"><MapPin size={20}/></div>
-                          <div className="doc-info"><span>Residence Proof</span>{selected.proofOfResidencePath && <a href={`${API_URL}/uploads/${selected.proofOfResidencePath}`} target="_blank"><Download size={14}/> Download</a>}</div>
+                          <div className="doc-info"><span>Residence Proof</span>{selected.proofOfResidencePath && <a href={getUploadUrl(selected.proofOfResidencePath)} target="_blank" rel="noreferrer"><Download size={14}/> Download</a>}</div>
                         </div>
                       </div>
                     </div>

@@ -32,7 +32,7 @@ const THEME_MODES = [
   { id: 'neon', icon: <Zap size={14} />, label: 'Neon' }
 ];
 
-export default function ThemeSwitcher() {
+export function ThemeSwitcher({ embedded = false }) {
   const [mode, setMode] = useState(localStorage.getItem('vps-theme') || 'dark');
   const [activeAccent, setActiveAccent] = useState(parseInt(localStorage.getItem('vps-accent-index')) || 4);
 
@@ -55,7 +55,7 @@ export default function ThemeSwitcher() {
   }, [mode, activeAccent]);
 
   return (
-    <div className="theme-switcher-lux">
+    <div className={embedded ? 'theme-switcher-embedded' : 'theme-switcher-lux'}>
       <div className="switcher-section">
         <label className="section-label"><Layers size={12} /> Aesthetics Control</label>
         <div className="mode-tabs-lux grid">

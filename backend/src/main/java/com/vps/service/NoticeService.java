@@ -2,16 +2,18 @@ package com.vps.service;
 
 import com.vps.entity.Notice;
 import com.vps.repository.NoticeRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class NoticeService {
 
     private final NoticeRepository noticeRepository;
+
+    public NoticeService(NoticeRepository noticeRepository) {
+        this.noticeRepository = noticeRepository;
+    }
 
     public Notice createNotice(Notice notice) {
         return noticeRepository.save(notice);

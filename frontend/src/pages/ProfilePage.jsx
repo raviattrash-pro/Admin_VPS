@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { changePassword } from '../api/api';
+import { useUI } from '../context/UIContext';
+import { changePassword, getUploadUrl, uploadProfilePhoto } from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { 
   User, 
   Shield, 
@@ -14,14 +16,32 @@ import {
   ShieldCheck,
   UserCircle,
   Fingerprint,
-  ArrowRight
+  ArrowRight,
+  LayoutDashboard,
+  Camera
 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { forceDesktop, setForceDesktop } = useUI();
   const [pwdForm, setPwdForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwdMsg, setPwdMsg] = useState({ type: '', text: '' });
   const [changingPwd, setChangingPwd] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await uploadProfilePhoto(file);
+      refreshUser({ photographPath: res.data.data });
+      setPwdMsg({ type: 'success', text: 'Identity visual updated successfully' });
+    } catch (err) {
+      setPwdMsg({ type: 'error', text: 'Failed to synchronize visual: ' + (err.response?.data?.message || err.message) });
+    }
+    setUploading(false);
+  };
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -56,8 +76,23 @@ export default function ProfilePage() {
           animate={{ x: 0, opacity: 1 }} 
           className="glass-static profile-card-lux"
         >
-          <div className="avatar-large-lux">
-            <UserCircle size={80} className="accent-text" />
+          <div className="avatar-large-lux" style={{ position: 'relative' }}>
+            {user?.photographPath ? (
+              <img 
+                src={getUploadUrl(user.photographPath)} 
+                alt={user?.fullName} 
+                className="profile-img-large" 
+              />
+            ) : (
+              <div className="avatar-initial-large">
+                <UserCircle size={80} className="accent-text" />
+              </div>
+            )}
+            
+            <label className="photo-upload-trigger" title="Update Identity Visual">
+              <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+              {uploading ? <div className="spinner-tiny" /> : <Camera size={18} />}
+            </label>
             <div className="status-indicator online"></div>
           </div>
           <div className="profile-info-lux">
@@ -139,6 +174,48 @@ export default function ProfilePage() {
               <ArrowRight size={20} />
             </button>
           </form>
+        </motion.div>
+
+        {/* Display Preferences */}
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }} 
+          animate={{ y: 0, opacity: 1 }} 
+          className="section-card-lux"
+          style={{ gridColumn: '1 / -1', marginTop: '32px' }}
+        >
+          <div className="modal-header-lux">
+            <LayoutDashboard size={24} className="accent-text" />
+            <h2>Display Preferences</h2>
+          </div>
+          
+          <div className="preferences-layout-lux">
+            <div className="theme-config-section">
+              <ThemeSwitcher embedded={true} />
+            </div>
+
+            <div className="view-toggle-section glass-static">
+              <div className="preference-info">
+                <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Expanded Mobile View</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  Enable this to show all management tools in the bottom navigation bar on mobile.
+                </p>
+              </div>
+              <div className="toggle-actions-lux">
+                <button 
+                  className={`btn ${!forceDesktop ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setForceDesktop(false)}
+                >
+                  Compact
+                </button>
+                <button 
+                  className={`btn ${forceDesktop ? 'btn-primary' : 'btn-glow'}`}
+                  onClick={() => setForceDesktop(true)}
+                >
+                  Expanded
+                </button>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
     </motion.div>

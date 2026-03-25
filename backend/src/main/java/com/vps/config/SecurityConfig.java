@@ -1,6 +1,5 @@
 package com.vps.config;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,10 +19,13 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+
+    public SecurityConfig(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -43,7 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SYSTEM_ADMIN", "TEACHER", "ACCOUNTANT", "STAFF")
-                .requestMatchers("/system/diagnose").authenticated()
+                .requestMatchers("/system/health", "/system/environment").authenticated()
                 .requestMatchers("/system/**").hasRole("SYSTEM_ADMIN")
                 .anyRequest().authenticated()
             )

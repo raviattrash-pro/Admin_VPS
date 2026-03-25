@@ -6,8 +6,8 @@ import com.vps.entity.User;
 import com.vps.repository.StudentRepository;
 import com.vps.repository.UserRepository;
 import com.vps.util.FileStorageUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,42 +23,46 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class StudentService {
+
+    private static final Logger log = LoggerFactory.getLogger(StudentService.class);
 
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final FileStorageUtil fileStorageUtil;
 
+    public StudentService(StudentRepository studentRepository, UserRepository userRepository, 
+                          PasswordEncoder passwordEncoder, FileStorageUtil fileStorageUtil) {
+        this.studentRepository = studentRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.fileStorageUtil = fileStorageUtil;
+    }
+
     private static final DateTimeFormatter DOB_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Transactional
     @CacheEvict(value = "students", allEntries = true)
     public Map<String, Object> createStudent(StudentRequest req,
-                                              MultipartFile birthCert,
-                                              MultipartFile transferCert,
-                                              MultipartFile reportCard,
-                                              MultipartFile photograph,
-                                              MultipartFile proofOfResidence) throws IOException {
-        // Auto-generate unique student ID: VPS-YYYYMMDD-XXXX
+                                               MultipartFile birthCert,
+                                               MultipartFile transferCert,
+                                               MultipartFile reportCard,
+                                               MultipartFile photograph,
+                                               MultipartFile proofOfResidence) throws IOException {
         String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
         long count = studentRepository.count() + 1;
         String studentId = String.format("VPS-%s-%04d", dateStr, count);
 
-        // Use Aadhaar / Samagra ID as username for login
         String username = req.getAadhaarOrSamagraId();
         if (username == null || username.trim().isEmpty()) {
             throw new RuntimeException("Aadhaar / Samagra ID is required to be used as username");
         }
 
-        // Ensure uniqueness
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("A student with this Aadhaar / Samagra ID already exists");
         }
 
-        // Create user account with default password 123456
         User user = User.builder()
                 .username(username)
                 .password(passwordEncoder.encode("123456"))
@@ -67,7 +71,6 @@ public class StudentService {
                 .build();
         user = userRepository.save(user);
 
-        // Create student profile
         Student student = Student.builder()
                 .studentId(studentId)
                 .fullName(req.getFullName())
@@ -100,7 +103,6 @@ public class StudentService {
                 .user(user)
                 .build();
 
-        // Handle file uploads
         if (birthCert != null && !birthCert.isEmpty()) {
             student.setBirthCertificatePath(fileStorageUtil.storeFile(birthCert, "documents"));
         }
@@ -178,7 +180,6 @@ public class StudentService {
         student.setTransportRequired(req.getTransportRequired());
         student.setLanguagePreferences(req.getLanguagePreferences());
 
-        // Update user full name too
         if (student.getUser() != null) {
             student.getUser().setFullName(req.getFullName());
             userRepository.save(student.getUser());

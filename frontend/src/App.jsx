@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { UIProvider, useUI } from './context/UIContext';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,7 +38,36 @@ const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
 const NoticesPage = lazy(() => import('./pages/NoticesPage'));
 import './App.css';
 
-import ThemeSwitcher from './components/ThemeSwitcher';
+import { ThemeSwitcher } from './components/ThemeSwitcher';
+import { getUploadUrl, getSystemHealth } from './api/api';
+
+function HealthIndicator() {
+  const [status, setStatus] = useState('loading');
+  
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await getSystemHealth();
+        setStatus(res.data.data?.status === 'UP' ? 'healthy' : 'degraded');
+      } catch (err) {
+        setStatus('error');
+      }
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const color = status === 'healthy' ? 'var(--success)' : status === 'degraded' ? 'var(--warning)' : 'var(--danger)';
+  const label = status === 'healthy' ? 'System Online' : status === 'degraded' ? 'System Degraded' : 'System Offline';
+
+  return (
+    <div className="health-indicator-mini" title={label}>
+      <div className={`pulse-dot ${status}`} style={{ backgroundColor: color }}></div>
+      <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>{label}</span>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children, role }) {
   const { user } = useAuth();
@@ -59,6 +89,7 @@ function ProtectedRoute({ children, role }) {
 
 function Layout({ children }) {
   const { user, logout, isAdmin } = useAuth();
+  const { forceDesktop } = useUI();
   const navigate = useNavigate();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
  
@@ -147,7 +178,18 @@ function Layout({ children }) {
 
         <div className="sidebar-footer">
           <div className="user-profile-mini">
-            <div className="avatar">{user?.fullName?.charAt(0)}</div>
+            <div className="avatar">
+              {user?.photographPath ? (
+                <img 
+                  src={getUploadUrl(user.photographPath)} 
+                  alt={user?.fullName} 
+                />
+              ) : (
+                <span className="avatar-initial">
+                  {user?.fullName?.charAt(0)}
+                </span>
+              )}
+            </div>
             <div className="info">
               <div className="name">{user?.fullName}</div>
               <div className="role">{isAdmin ? 'Administrator' : 'Student'}</div>
@@ -157,7 +199,10 @@ function Layout({ children }) {
             </button>
           </div>
           
-          <ThemeSwitcher />
+          <div className="sidebar-meta">
+            <HealthIndicator />
+            <ThemeSwitcher />
+          </div>
         </div>
       </aside>
       <header className="mobile-header">
@@ -198,7 +243,7 @@ function Layout({ children }) {
       </main>
 
       <div className="mobile-nav">
-        {[...new Map([...links.slice(0, 4), links[links.length - 1]].map(l => [l.path, l])).values()].map(link => (
+        {[...new Map((forceDesktop ? links : [...links.slice(0, 4), links[links.length - 1]]).map(l => [l.path, l])).values()].map(link => (
           <NavLink 
             key={link.path} 
             to={link.path} 
@@ -229,6 +274,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+      <UIProvider>
       <AuthProvider>
         <Suspense fallback={<div className="full-page-loader" />}>
           <Routes>
@@ -278,6 +324,7 @@ export default function App() {
         </Routes>
         </Suspense>
       </AuthProvider>
+      </UIProvider>
     </BrowserRouter>
     </QueryClientProvider>
   );

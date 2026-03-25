@@ -13,8 +13,9 @@ export const AuthProvider = ({ children }) => {
     const role = localStorage.getItem('role');
     const fullName = localStorage.getItem('fullName');
     const userId = localStorage.getItem('userId');
+    const photographPath = localStorage.getItem('photographPath');
     if (token && role) {
-      setUser({ token, role, fullName, userId: parseInt(userId) });
+      setUser({ token, role, fullName, userId: parseInt(userId), photographPath });
     }
     setLoading(false);
   }, []);
@@ -24,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('role', data.role);
     localStorage.setItem('fullName', data.fullName);
     localStorage.setItem('userId', data.userId);
+    localStorage.setItem('photographPath', data.photographPath || '');
     setUser(data);
   };
 
@@ -32,13 +34,21 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshUser = (newData) => {
+    const updated = { ...user, ...newData };
+    setUser(updated);
+    if (newData.fullName) localStorage.setItem('fullName', newData.fullName);
+    if (newData.photographPath !== undefined) localStorage.setItem('photographPath', newData.photographPath || '');
+  };
+
   if (loading) return null;
 
   return (
     <AuthContext.Provider value={{ 
       user, 
       loginUser, 
-      logout, 
+      logout,
+      refreshUser,
       isAdmin: user?.role && ['ADMIN', 'SYSTEM_ADMIN', 'TEACHER', 'ACCOUNTANT', 'STAFF'].includes(user.role) 
     }}>
       {children}

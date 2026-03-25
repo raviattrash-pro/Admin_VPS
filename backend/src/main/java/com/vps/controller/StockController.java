@@ -5,7 +5,6 @@ import com.vps.entity.StockHistory;
 import com.vps.entity.StockItem;
 import com.vps.entity.User;
 import com.vps.service.StockService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -14,10 +13,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/admin/stock")
-@RequiredArgsConstructor
 public class StockController {
 
     private final StockService stockService;
+
+    public StockController(StockService stockService) {
+        this.stockService = stockService;
+    }
 
     @PostMapping
     public ResponseEntity<?> createItem(@RequestBody StockItem item, @AuthenticationPrincipal User admin) {

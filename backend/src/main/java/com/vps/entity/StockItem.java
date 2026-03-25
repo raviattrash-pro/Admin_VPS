@@ -1,15 +1,10 @@
 package com.vps.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "stock_items")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class StockItem {
 
     @Id
@@ -17,13 +12,13 @@ public class StockItem {
     private Long id;
 
     @Column(nullable = false)
-    private String category; // Dairy, Bench, Desk, School Belt, Dress
+    private String category;
 
     @Column(nullable = false)
     private String itemName;
 
-    private String subType; // For dress: Skirt, Shirt, Pant
-    private String size;    // For dress: S, M, L, XL, etc.
+    private String subType;
+    private String size;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -33,6 +28,30 @@ public class StockItem {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public StockItem() {}
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public String getItemName() { return itemName; }
+    public void setItemName(String itemName) { this.itemName = itemName; }
+    public String getSubType() { return subType; }
+    public void setSubType(String subType) { this.subType = subType; }
+    public String getSize() { return size; }
+    public void setSize(String size) { this.size = size; }
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public Double getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     @PrePersist
     protected void onCreate() {

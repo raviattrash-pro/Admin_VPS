@@ -4,7 +4,6 @@ import com.vps.dto.ApiResponse;
 import com.vps.entity.Expense;
 import com.vps.entity.User;
 import com.vps.service.ExpenseService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -14,10 +13,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/expenses")
-@RequiredArgsConstructor
 public class ExpenseController {
 
     private final ExpenseService expenseService;
+
+    public ExpenseController(ExpenseService expenseService) {
+        this.expenseService = expenseService;
+    }
 
     @PostMapping
     public ResponseEntity<?> createExpense(@RequestBody Expense expense, @AuthenticationPrincipal User admin) {
