@@ -1,12 +1,10 @@
-name: Render Keep-Alive (Daytime Only)
+name: Render Keep-Alive (Daytime & Auto-Clean)
 
 on:
   schedule:
-    # Runs every 10 minutes between 00:00 and 15:00 UTC
-    # This equals ~5:30 AM to 8:30 PM IST
+    # Runs every 10 mins from ~5:30 AM to 8:30 PM IST (0-15 UTC)
     - cron: '*/10 0-15 * * *'
   workflow_dispatch:
-    # Manual trigger for testing
 
 jobs:
   ping-render:
@@ -14,7 +12,18 @@ jobs:
     steps:
       - name: Send Heartbeat Ping
         run: |
-          # Removed -f to stop exit code 22 errors
-          # Added -L to follow redirects
           curl -s -L https://admin-vps.onrender.com > /dev/null
           echo "Daytime ping sent at $(date)"
+
+  cleanup-history:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Delete workflow runs older than 1 day
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Finds runs older than 24 hours and deletes them
+          gh run list --workflow "Render Keep-Alive (Daytime & Auto-Clean)" --created "<$(date -d '1 day ago' -Iseconds)" --json databaseId  --jq '.[].databaseId' | xargs -I {} gh run delete {}
